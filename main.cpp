@@ -131,6 +131,20 @@ void usage() {
     printf("smaple: pcap_test wlan0\n");
 }
 
+void _printPacket(const unsigned char *p, uint32_t size)
+{
+    int len = 0;
+    while(len < size) {
+        printf("%02X ", *(p++));
+        if(!(++len % 16)) printf("\n");
+    }
+}
+
+void printPacket(const unsigned char *p, const struct pcap_pkthdr *h)
+{
+    _printPacket(p, h->len);
+}
+
 int main(int argc, char* argv[]) {
     if(argc != 2) {
         usage();
@@ -197,6 +211,10 @@ int main(int argc, char* argv[]) {
 
         printf("TCP SRC PORT : %u\n", tcps->th_sport);
         printf("TCP DEST PORT : %u\n", tcps->th_dport);
+        uint32_t tcp_size = (ntohs(ips->ip_len) - ((ips->ip_hl + tcps->th_off) * 4));
+        if(tcp_size > 0) {
+            printPacket(packet + sizeof(ether_header) + sizeof(ip_header) + sizeof(tcp_header), tcp_size);
+        }
     }
 
     pcap_close(handle);
