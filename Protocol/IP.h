@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+
 struct ip_addr
 {
     uint8_t a;
@@ -7,6 +8,7 @@ struct ip_addr
     uint8_t c;
     uint8_t d;
 };
+
 struct ip_header
 {
 #if __BYTE_ORDER == __LITTLE_ENDIAN

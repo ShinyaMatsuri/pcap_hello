@@ -89,6 +89,12 @@ int main(int argc, char *argv[])
                 uint32_t tcp_size = (ntohs(ips->ip_len) - ((ips->ip_hl + tcps->th_off) * 4));
                 if (tcp_size > 0)
                     printPacket(packet + packetIndex, tcp_size);
+                const u_char *data = (u_char *)(packet + packetIndex);
+                packetIndex += sizeof(u_char);
+                uint dlen = (ntohs(ips->ip_len) - ((ips->ip_hl + tcps->th_off) * 4));
+                if(dlen) {
+                    if(http_check) printHTTP(data);
+                }
             }
             else if (ips->ip_p == IPPROTO_UDP)
             {
@@ -98,8 +104,16 @@ int main(int argc, char *argv[])
                 printf("UDP SRC PORT : %u\n", ntohs(udps->uh_sport));
                 printf("UDP DEST PORT : %u\n", ntohs(udps->uh_dport));
                 uint32_t udp_size = (ntohs(ips->ip_len) - sizeof(ip_header) - sizeof(udp_header));
-                if (udp_size > 0)
-                    printPacket(packet + packetIndex, udp_size);
+                if (udp_size > 0) printPacket(packet + packetIndex, udp_size);
+            }
+            else if(ips->ip_p == 1) {
+                const icmp_header *icm = (icmp_header *)(packet + packetIndex);
+                packetIndex += sizeof(icmp_header);
+        
+                uint32_t icmp_size = (ntohs(ips->ip_len) - sizeof(ip_header) - sizeof(icmp_header));
+                printf("ICMP Type : %u\n", icm->type);
+                printf("ICMP Code : %u\n", icm->code);
+                printf("ICMP Checksum : 0x%X\n", icm->checksum);
             }
         }
         else if (ntohs(eth->ether_type) == ETHERTYPE_ARP)
