@@ -2,11 +2,64 @@
 #include <pcap.h>
 #include <stdint.h>
 #include <arpa/inet.h>
+#include <string.h>
+
 #include "Protocol/all.h"
 #include "packet.h"
 
 #define MAC_LENGTH 6
 #define IPV4_LENGTH 4
+
+const char *HTTP_METHOD_HTTP = "HTTP";
+const char *HTTP_METHOD_GET = "GET";
+const char *HTTP_METHOD_POST = "POST";
+const char *HTTP_METHOD_PUT = "PUT";
+const char *HTTP_METHOD_DELETE = "DELETE";
+const char *HTTP_METHOD_CONNECT = "CONNECT";
+const char *HTTP_METHOD_OPTIONS = "OPTIONS";
+const char *HTTP_METHOD_TRACE = "TRACE";
+const char *HTTP_METHOD_PATCH = "PATCH";
+
+const void *H_METHOD[9] =
+{
+    HTTP_METHOD_HTTP,
+    HTTP_METHOD_GET,
+    HTTP_METHOD_POST,
+    HTTP_METHOD_PUT,
+    HTTP_METHOD_DELETE,
+    HTTP_METHOD_CONNECT,
+    HTTP_METHOD_OPTIONS,
+    HTTP_METHOD_TRACE,
+    HTTP_METHOD_PATCH
+};
+/*
+bool checkHTTPMethod(const uint8_t *data, const char *httpMethod, uint32_t size)
+{
+    int httpMethodSize = strlen(httpMethod);
+    if(size <= httpMethodSize) return false;
+    return memcmp(data, httpMethod, httpMethodSize) == 0;
+}
+
+bool is HTTPProtocol(const uint8_t *p, uint32_t size)
+{
+    for(int i = 0; i < (sizeof(H_METHOD) / sizeof(void *)); i++) {
+        bool isFind = checkHTTPMethod(p, (const char *)H_METHOD[i], size);
+        if(isFind) return isFind;
+    }
+    return false;
+}
+*/
+bool http_check(const u_char *DATA)
+{
+    for(int i = 0; i < 9; i++) {
+        if(!strncmp((const char *)DATA, (const char *)H_METHOD[i], strlen((const char *)H_METHOD[i]))) {
+            printf("%s/",(const char *)H_METHOD[i]);
+            return true;
+        }
+    }
+    return false;
+}
+
 
 void usage()
 {
@@ -86,14 +139,13 @@ int main(int argc, char *argv[])
 
                 printf("TCP SRC PORT : %u\n", tcps->th_sport);
                 printf("TCP DEST PORT : %u\n", tcps->th_dport);
-                uint32_t tcp_size = (ntohs(ips->ip_len) - ((ips->ip_hl + tcps->th_off) * 4));
-                if (tcp_size > 0)
-                    printPacket(packet + packetIndex, tcp_size);
+                uint32_t tcp_size = tcps->th_off * 4;
+
                 const u_char *data = (u_char *)(packet + packetIndex);
-                packetIndex += sizeof(u_char);
                 uint dlen = (ntohs(ips->ip_len) - ((ips->ip_hl + tcps->th_off) * 4));
                 if(dlen) {
-                    if(http_check) printHTTP(data);
+                    if(http_check(data)) printHTTP(data);
+                    else printPacket(data, dlen);
                 }
             }
             else if (ips->ip_p == IPPROTO_UDP)
@@ -103,17 +155,22 @@ int main(int argc, char *argv[])
 
                 printf("UDP SRC PORT : %u\n", ntohs(udps->uh_sport));
                 printf("UDP DEST PORT : %u\n", ntohs(udps->uh_dport));
-                uint32_t udp_size = (ntohs(ips->ip_len) - sizeof(ip_header) - sizeof(udp_header));
-                if (udp_size > 0) printPacket(packet + packetIndex, udp_size);
+
+                const u_char *data = (u_char *)(packet + packetIndex);
+                uint dlen = (ntohs(ips->ip_len) - ips->ip_hl * 4 - sizeof(udp_header));
+                if(dlen) printPacket(data, dlen);
             }
-            else if(ips->ip_p == 1) {
+            else if(ips->ip_p == IPPROTO_ICMP) {
                 const icmp_header *icm = (icmp_header *)(packet + packetIndex);
                 packetIndex += sizeof(icmp_header);
         
-                uint32_t icmp_size = (ntohs(ips->ip_len) - sizeof(ip_header) - sizeof(icmp_header));
                 printf("ICMP Type : %u\n", icm->type);
                 printf("ICMP Code : %u\n", icm->code);
                 printf("ICMP Checksum : 0x%X\n", icm->checksum);
+
+                const u_char *data = (u_char *)(packet + packetIndex);
+                uint dlen = (ntohs(ips->ip_len) - ips->ip_hl * 4 - sizeof(icmp_header));
+                if(dlen) printPacket(data, dlen);
             }
         }
         else if (ntohs(eth->ether_type) == ETHERTYPE_ARP)

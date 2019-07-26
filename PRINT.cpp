@@ -46,7 +46,9 @@ void printMACAddress(mac_addr mac)
     printf("%02X:%02X:%02X:%02X:%02X:%02X\n", mac.oui[0], mac.oui[1], mac.oui[2], mac.nic[0], mac.nic[1], mac.nic[2]);
 }
 
-void printHTTP()
+void printHTTP(const u_char *DATA)
 {
-    
+    puts("HTTP_DATA\n===============================================================================");
+    puts((char*)DATA);
+    puts("\n===============================================================================");
 }

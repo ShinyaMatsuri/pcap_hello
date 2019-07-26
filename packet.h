@@ -7,3 +7,4 @@
 
 void printPacket(const unsigned char *p, uint32_t size);
 void printMACAddress(mac_addr mac);
+void printHTTP(const u_char *DATA);
